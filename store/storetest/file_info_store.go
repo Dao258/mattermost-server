@@ -282,6 +282,9 @@ func testFileInfoGetWithOptions(t *testing.T, ss store.Store) {
 		if post.Id != "" {
 			fileInfo.PostId = post.Id
 		}
+		if post.ChannelId != "" {
+			fileInfo.ChannelId = post.ChannelId
+		}
 		_, err := ss.FileInfo().Save(&fileInfo)
 		require.NoError(t, err)
 		return fileInfo
@@ -407,6 +410,7 @@ func testFileInfoAttachToPost(t *testing.T, ss store.Store) {
 	t.Run("should attach files", func(t *testing.T) {
 		userId := model.NewId()
 		postId := model.NewId()
+		channelId := model.NewId()
 
 		info1, err := ss.FileInfo().Save(&model.FileInfo{
 			CreatorId: userId,
@@ -422,13 +426,15 @@ func testFileInfoAttachToPost(t *testing.T, ss store.Store) {
 		require.Equal(t, "", info1.PostId)
 		require.Equal(t, "", info2.PostId)
 
-		err = ss.FileInfo().AttachToPost(info1.Id, postId, userId)
+		err = ss.FileInfo().AttachToPost(info1.Id, postId, channelId, userId)
 		assert.NoError(t, err)
 		info1.PostId = postId
+		info1.ChannelId = channelId
 
-		err = ss.FileInfo().AttachToPost(info2.Id, postId, userId)
+		err = ss.FileInfo().AttachToPost(info2.Id, postId, channelId, userId)
 		assert.NoError(t, err)
 		info2.PostId = postId
+		info2.ChannelId = channelId
 
 		data, err := ss.FileInfo().GetForPost(postId, true, false, false)
 		require.NoError(t, err)
@@ -442,6 +448,7 @@ func testFileInfoAttachToPost(t *testing.T, ss store.Store) {
 	t.Run("should not attach files to multiple posts", func(t *testing.T) {
 		userId := model.NewId()
 		postId := model.NewId()
+		channelId := model.NewId()
 
 		info, err := ss.FileInfo().Save(&model.FileInfo{
 			CreatorId: userId,
@@ -451,16 +458,17 @@ func testFileInfoAttachToPost(t *testing.T, ss store.Store) {
 
 		require.Equal(t, "", info.PostId)
 
-		err = ss.FileInfo().AttachToPost(info.Id, model.NewId(), userId)
+		err = ss.FileInfo().AttachToPost(info.Id, model.NewId(), channelId, userId)
 		require.NoError(t, err)
 
-		err = ss.FileInfo().AttachToPost(info.Id, postId, userId)
+		err = ss.FileInfo().AttachToPost(info.Id, postId, channelId, userId)
 		require.Error(t, err)
 	})
 
 	t.Run("should not attach files owned from a different user", func(t *testing.T) {
 		userId := model.NewId()
 		postId := model.NewId()
+		channelId := model.NewId()
 
 		info, err := ss.FileInfo().Save(&model.FileInfo{
 			CreatorId: model.NewId(),
@@ -470,12 +478,13 @@ func testFileInfoAttachToPost(t *testing.T, ss store.Store) {
 
 		require.Equal(t, "", info.PostId)
 
-		err = ss.FileInfo().AttachToPost(info.Id, postId, userId)
+		err = ss.FileInfo().AttachToPost(info.Id, postId, channelId, userId)
 		assert.Error(t, err)
 	})
 
 	t.Run("should attach files uploaded by nouser", func(t *testing.T) {
 		postId := model.NewId()
+		channelId := model.NewId()
 
 		info, err := ss.FileInfo().Save(&model.FileInfo{
 			CreatorId: "nouser",
@@ -484,12 +493,13 @@ func testFileInfoAttachToPost(t *testing.T, ss store.Store) {
 		require.NoError(t, err)
 		assert.Equal(t, "", info.PostId)
 
-		err = ss.FileInfo().AttachToPost(info.Id, postId, model.NewId())
+		err = ss.FileInfo().AttachToPost(info.Id, postId, channelId, model.NewId())
 		require.NoError(t, err)
 
 		data, err := ss.FileInfo().GetForPost(postId, true, false, false)
 		require.NoError(t, err)
 		info.PostId = postId
+		info.ChannelId = channelId
 		assert.EqualValues(t, []*model.FileInfo{info}, data)
 	})
 }
